@@ -1,0 +1,26 @@
+name: Build and Publish Snap
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  snap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Snap Package
+        id: build
+        uses: canonical/action-build@v1
+      - name: Upload Snap Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vangs-app-snap
+          path: ${{ steps.build.outputs.snap }}
+      - name: Publish to Snap Store
+        if: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        uses: canonical/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: stable
