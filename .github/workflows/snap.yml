@@ -1,4 +1,4 @@
-name: Build and Publish Snap
+name: Build and Publish Snap & Flatpak
 on:
   push:
     branches: [main]
@@ -63,3 +63,15 @@ jobs:
         with:
           snap: ${{ env.SNAP_FILE }}
           release: stable
+      - name: Build Direct Flatpak Bundle
+        run: |
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08 org.electronjs.Electron2.BaseApp//24.08
+          cd flatpak && flatpak-builder --user --repo=repo --force-clean build-dir app.vangs.VangsApp.yml
+          flatpak build-bundle repo "Vangs App.flatpak" app.vangs.VangsApp
+      - name: Upload Flatpak Bundle Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vangs-app-flatpak
+          path: flatpak/Vangs App.flatpak
