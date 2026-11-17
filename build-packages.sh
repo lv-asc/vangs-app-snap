@@ -1,0 +1,49 @@
+#!/bin/bash
+set -e
+sudo apt-get update && sudo apt-get install -y squashfs-tools flatpak flatpak-builder curl jq
+VERSION=$(grep -E "^version:" snap/snapcraft.yaml | sed -E "s/version:\s*['\"]?([^'\"]+)['\"]?/\1/")
+mkdir -p build/root/meta/gui build/root/opt/vangs-app
+curl -sL "https://storage.googleapis.com/vangarments-storage/releases/linux/x64/Vangs%20App.tar.gz" -o vangs.tar.gz
+tar -xzf vangs.tar.gz --strip-components=1 -C build/root/opt/vangs-app
+if [ -f "build/root/opt/vangs-app/Vangs App" ]; then mv "build/root/opt/vangs-app/Vangs App" build/root/opt/vangs-app/vangs-app; fi
+chmod +x build/root/opt/vangs-app/vangs-app
+cp snap/gui/vangs-app.png build/root/meta/gui/icon.png
+cp snap/gui/vangs-app.desktop build/root/meta/gui/vangs-app.desktop
+sed -i "s|vangs-app.png|icon.png|g" build/root/meta/gui/vangs-app.desktop
+cat << EOF > build/root/meta/snap.yaml
+name: vangs-app
+version: ${VERSION}
+summary: Vangs App — Digital Wardrobe, Fashion Ecosystem & Marketplace
+description: Vangs App is the unified fashion platform for cataloging your digital wardrobe, styling outfits, connecting across the fashion network, and exploring curated pieces.
+architectures:
+  - amd64
+base: core22
+confinement: strict
+grade: stable
+apps:
+  vangs-app:
+    command: opt/vangs-app/vangs-app --no-sandbox
+    common-id: app.vangs.VangsApp
+    plugs:
+      - desktop
+      - desktop-legacy
+      - home
+      - x11
+      - wayland
+      - unity7
+      - browser-support
+      - network
+      - network-bind
+      - audio-playback
+      - audio-record
+      - camera
+      - opengl
+      - removable-media
+      - password-manager-service
+EOF
+mksquashfs build/root "vangs-app_${VERSION}_amd64.snap" -noappend -comp xz -no-xattrs -no-fragments -all-root
+echo "SNAP_FILE=vangs-app_${VERSION}_amd64.snap" >> $GITHUB_ENV
+flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --user -y flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08 org.electronjs.Electron2.BaseApp//24.08
+cd flatpak && flatpak-builder --user --repo=repo --force-clean build-dir app.vangs.VangsApp.yml
+flatpak build-bundle repo "Vangs App.flatpak" app.vangs.VangsApp
