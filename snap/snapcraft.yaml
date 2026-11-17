@@ -18,7 +18,7 @@ architectures:
 
 apps:
   vangs-app:
-    command: opt/vangs-app/Vangs\ App --no-sandbox
+    command: opt/vangs-app/vangs-app --no-sandbox
     extensions: [gnome]
     common-id: app.vangs.VangsApp
     plugs:
@@ -45,6 +45,7 @@ parts:
     source-type: tar
     source-checksum: sha256/371545b824b63526942cab62b5b677d8af23d2b0b304b8b061061872f52a2972
     organize:
+      'Vangs App': opt/vangs-app/vangs-app
       '*': opt/vangs-app/
     stage-packages:
       - libnss3
