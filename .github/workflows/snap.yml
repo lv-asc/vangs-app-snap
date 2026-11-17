@@ -8,19 +8,58 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build Snap Package
-        id: build
-        uses: snapcore/action-build@v1
-      - name: Upload Snap Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: vangs-app-snap
-          path: ${{ steps.build.outputs.snap }}
+      - name: Package Snap SquashFS
+        run: |
+          sudo apt-get update && sudo apt-get install -y squashfs-tools curl jq
+          VERSION=$(grep -E "^version:" snap/snapcraft.yaml | sed -E "s/version:\s*['\"]?([^'\"]+)['\"]?/\1/")
+          mkdir -p build/root/meta/gui build/root/opt/vangs-app
+          curl -sL "https://storage.googleapis.com/vangarments-storage/releases/linux/x64/Vangs%20App.tar.gz" -o vangs.tar.gz
+          tar -xzf vangs.tar.gz --strip-components=1 -C build/root/opt/vangs-app
+          if [ -f "build/root/opt/vangs-app/Vangs App" ]; then mv "build/root/opt/vangs-app/Vangs App" build/root/opt/vangs-app/vangs-app; fi
+          chmod +x build/root/opt/vangs-app/vangs-app
+          cp snap/gui/vangs-app.png build/root/meta/gui/icon.png
+          cp snap/gui/vangs-app.desktop build/root/meta/gui/vangs-app.desktop
+          sed -i "s|vangs-app.png|icon.png|g" build/root/meta/gui/vangs-app.desktop
+          cat << EOF > build/root/meta/snap.yaml
+          name: vangs-app
+          version: ${VERSION}
+          summary: Vangs App — Digital Wardrobe, Fashion Ecosystem & Marketplace
+          description: |
+            Vangs App is the unified fashion platform for cataloging your digital wardrobe,
+            styling outfits, connecting across the fashion network, and exploring curated pieces.
+          architectures:
+            - amd64
+          base: core22
+          confinement: strict
+          grade: stable
+          apps:
+            vangs-app:
+              command: opt/vangs-app/vangs-app --no-sandbox
+              common-id: app.vangs.VangsApp
+              plugs:
+                - desktop
+                - desktop-legacy
+                - home
+                - x11
+                - wayland
+                - unity7
+                - browser-support
+                - network
+                - network-bind
+                - audio-playback
+                - audio-record
+                - camera
+                - opengl
+                - removable-media
+                - password-manager-service
+          EOF
+          mksquashfs build/root "vangs-app_${VERSION}_amd64.snap" -noappend -comp xz -no-xattrs -no-fragments -all-root
+          echo "SNAP_FILE=vangs-app_${VERSION}_amd64.snap" >> $GITHUB_ENV
       - name: Publish to Snap Store
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        if: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         uses: snapcore/action-publish@v1
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
-          snap: ${{ steps.build.outputs.snap }}
+          snap: ${{ env.SNAP_FILE }}
           release: stable
