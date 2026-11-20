@@ -38,7 +38,7 @@ modules:
           - x86_64
         dest: main
         url: https://storage.googleapis.com/vangarments-storage/releases/linux/x64/Vangs%20App.tar.gz
-        sha256: 2768a6165c719ba93556d44f1bace63e3889509202e6f2552c0d1cfe0699dc50
+        sha256: e81b1411e011132e184cd950869ed7d26bbad20efe1a0d349fc33091a4be19ac
       - type: file
         path: app.vangs.VangsApp.desktop
       - type: file
